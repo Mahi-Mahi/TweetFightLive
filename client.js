@@ -68,8 +68,22 @@ socket.on('scores', function(msg) {
 		.attr("dy", ".35em")
 		.text(function(d) {
 			console.log(d);
-			return d.label;
+			return d.data.label;
 		});
+
+	/*
+		legend = svg
+			.append("g")
+			.attr("legend")
+			.append("text")
+			.attr("fill", function(d, i) {
+				return color(i);
+			})
+			.text(function(d) {
+				console.log(d);
+				return d.data.label;
+			});
+	*/
 
 	svg
 		.selectAll("path")
