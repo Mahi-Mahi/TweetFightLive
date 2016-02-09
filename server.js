@@ -20,7 +20,7 @@ io.on('connection', function(socket) {
 var redis = require('redis');
 var client = redis.createClient(); //creates a new client
 
-var keywords = ['creed', 'martian', 'revenant'];
+var keywords = ['remaniement', 'uber', 'taxi', 'apocalypse', 'mardi gras', 'nouvel an'];
 var re = RegExp(keywords.join('|'), 'i');
 
 var period = 500;
@@ -80,9 +80,9 @@ client.on('connect', function() {
 		console.log('Oh no');
 	});
 
-	t.track('creed');
-	t.track('revenants');
-	t.track('martian');
+	keywords.forEach(function(item) {
+		t.track(item);
+	})
 });
 
 http.listen(3000, function() {
