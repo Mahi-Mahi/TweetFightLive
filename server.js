@@ -82,8 +82,8 @@ credis.on('connect', function() {
 
 		t.on('tweet', function(tweet) {
 
-			// if (tweet.lang != 'fr')
-			// 	return;
+			if (tweet.lang != 'fr')
+				return;
 
 			var match = tweet.text.match(re);
 			if (match) {
