@@ -18,71 +18,107 @@ io.on('connection', function(socket) {
 });
 
 var redis = require('redis');
-var client = redis.createClient(); //creates a new client
+var credis = redis.createClient(); //creates a new client
 
-var keywords = ['remaniement', 'uber', 'taxi', 'apocalypse', 'mardi gras', 'nouvel an'];
+var keywords = [
+	'trapp', 'marquinhos', 'thiago silva', 'david luiz', 'maxwell', 'thiago motta', 'verratti', 'matuidi', 'di maria', 'ibrahimovic', 'lucas',
+	'courtois', 'azpilicueta', 'ivanovic', 'cahill', 'baba', 'mikel', 'fabregas', 'pedro', 'willian', 'hazard', 'costa'
+];
 var re = RegExp(keywords.join('|'), 'i');
 
-var period = 500;
 var timestamp = function() {
-	var t = Date.now() / period;
+	var t = Math.floor(Date.now() / 1000 / period);
 	return t;
 };
+var previous_timestamp = function(n) {
+	return timestamp() - n;
+};
 
-client.on('connect', function() {
+var period = 10;
+var ratio = [1, 0.5, 0.2, 0.1];
+
+var summarize = function(credis, keyword, total, n, cb) {
+
+	// console.log("summarize", keyword, total, n);
+
+	if (n < ratio.length) {
+
+		credis.scard(keyword + '/' + previous_timestamp(n), function(err, res) {
+
+			if (res) {
+				summarize(credis, keyword, total + (res * ratio[n]), n + 1, cb);
+			} else {
+				cb(total);
+			}
+
+		});
+	} else {
+
+		cb(total);
+
+	}
+
+};
+
+var current;
+var scores = {};
+
+credis.on('connect', function() {
 	console.log('connected');
 
-	keywords.forEach(function(keyword) {
-		client.set(keyword, 0);
-		client.expire(keyword, 3600);
-	});
+	credis.flushall(function(err, res) {
 
-	var Twitter = require('node-tweet-stream'),
-		t = new Twitter({
-			consumer_key: 'IxaMqu3dzMq124EuqKpg',
-			consumer_secret: 'GyYvjFjy8kXdpMzpsRzcppD1TnnWa8kBRfuOEHfpkNs',
-			token: '1501751-DWOxQ4iGLhASly8E7Dx8yeZvoJK83doOdMPmf1ob5E',
-			token_secret: 'H9OV55BYs96ldaQ3VGPmTYsua37fQEUbbK0y1iHiMAVWR'
+		keywords.forEach(function(keyword) {
+			credis.set('kwd/' + keyword + '/total', 0);
 		});
 
-	t.on('tweet', function(tweet) {
-
-		console.log(tweet.text);
-
-		client.set(tweet.id_str, tweet);
-		client.expire(tweet.id_str, 3600);
-
-		var match = tweet.text.match(re);
-		if (match) {
-			var keyword = match[0].toLowerCase();
-			client.incr(keyword);
-			client.setnx(keyword + timestamp(), 0);
-			client.incr(keyword + timestamp());
-		}
-
-		client.mget(keywords, function(err, res) {
-
-			var scores = {};
-
-			res.forEach(function(incr, idx) {
-				scores[keywords[idx]] = parseInt(incr, 10);
+		var Twitter = require('node-tweet-stream'),
+			t = new Twitter({
+				consumer_key: 'IxaMqu3dzMq124EuqKpg',
+				consumer_secret: 'GyYvjFjy8kXdpMzpsRzcppD1TnnWa8kBRfuOEHfpkNs',
+				token: '1501751-DWOxQ4iGLhASly8E7Dx8yeZvoJK83doOdMPmf1ob5E',
+				token_secret: 'H9OV55BYs96ldaQ3VGPmTYsua37fQEUbbK0y1iHiMAVWR'
 			});
 
-			io.emit('scores', JSON.stringify(scores));
+		t.on('tweet', function(tweet) {
 
-			console.log(scores);
+			// if (tweet.lang != 'fr')
+			// 	return;
 
+			var match = tweet.text.match(re);
+			if (match) {
+
+				credis.set('tweet/' + tweet.id_str, tweet);
+
+				var keyword = 'kwd/' + match[0].toLowerCase();
+
+				// console.log(keyword);
+
+				credis.sadd(keyword + '/' + timestamp(), tweet.id_str, function(err, res) {
+					// console.log('>>', keyword + '/' + timestamp(), res);
+				});
+
+				summarize(credis, keyword, 0, 0, function(res) {
+
+					credis.set(keyword + '/live', res);
+
+					scores[keyword.substr(4)] = res;
+
+					io.emit('scores', JSON.stringify(scores));
+
+				});
+
+			}
 		});
 
-	});
+		t.on('error', function(err) {
+			console.log('Oh no');
+		});
 
-	t.on('error', function(err) {
-		console.log('Oh no');
+		keywords.forEach(function(item) {
+			t.track(item);
+		})
 	});
-
-	keywords.forEach(function(item) {
-		t.track(item);
-	})
 });
 
 http.listen(3000, function() {

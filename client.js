@@ -38,6 +38,7 @@ function arcTween(a) {
 var socket = io();
 socket.on('scores', function(msg) {
 	var scores = JSON.parse(msg);
+	console.log(scores);
 	var data = [];
 	for (var keyword in scores) {
 		if (scores.hasOwnProperty(keyword)) {
