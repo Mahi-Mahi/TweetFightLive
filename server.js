@@ -20,10 +20,13 @@ io.on('connection', function(socket) {
 var redis = require('redis');
 var credis = redis.createClient(); //creates a new client
 
-var keywords = [
-	'trapp', 'marquinhos', 'thiago silva', 'david luiz', 'maxwell', 'thiago motta', 'verratti', 'matuidi', 'di maria', 'ibrahimovic', 'lucas',
-	'courtois', 'azpilicueta', 'ivanovic', 'cahill', 'baba', 'mikel', 'fabregas', 'pedro', 'willian', 'hazard', 'costa'
-];
+var config = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'));
+
+var keywords = config.keywords;
+keywords = keywords.filter(function(elem, pos) {
+	return keywords.indexOf(elem) == pos;
+});
+
 var re = RegExp(keywords.join('|'), 'i');
 
 var timestamp = function() {
