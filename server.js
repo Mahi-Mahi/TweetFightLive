@@ -72,6 +72,7 @@ credis.on('connect', function() {
 	credis.flushall(function(err, res) {
 
 		keywords.forEach(function(keyword) {
+			console.log(keyword);
 			credis.set('kwd/' + keyword + '/total', 0);
 		});
 
@@ -90,6 +91,8 @@ credis.on('connect', function() {
 
 			var match = tweet.text.match(re);
 			if (match) {
+
+				console.log(match[0]);
 
 				credis.set('tweet/' + tweet.id_str, tweet);
 
